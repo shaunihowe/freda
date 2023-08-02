@@ -1,0 +1,2 @@
+# freda
+Freda Chess Engine
