@@ -3,8 +3,8 @@ COPTS  = -g -Wall -O3 -s
 LIBS   = -lpthread -lm
 
 all: compile
-	$(CC) $(COPTS) -o bin/freda_xboard $(LIBS) obj/freda_xboard.o obj/api.o obj/bitboard.o obj/board.o obj/eval_weights.o obj/eval.o obj/hash.o obj/search.o
-	$(CC) $(COPTS) -o bin/freda_uci $(LIBS) obj/freda_uci.o obj/api.o obj/bitboard.o obj/board.o obj/eval_weights.o obj/eval.o obj/hash.o obj/search.o
+	$(CC) $(COPTS) obj/freda_xboard.o obj/api.o obj/bitboard.o obj/board.o obj/eval_weights.o obj/eval.o obj/hash.o obj/search.o $(LIBS) -o bin/freda_xboard
+	$(CC) $(COPTS) obj/freda_uci.o obj/api.o obj/bitboard.o obj/board.o obj/eval_weights.o obj/eval.o obj/hash.o obj/search.o $(LIBS) -o bin/freda_uci
 
 compile: clean
 	$(CC) $(COPTS) $(LIBS) -o obj/api.o -c src/api.c
