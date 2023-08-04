@@ -6,6 +6,7 @@
 #define __INC_API__ 
 
 #include <stdint.h>
+#include <math.h>
 
 #define VERSION_NAME	"Freda"
 #define VERSION_AUTHOR	"Shaun Howe"
