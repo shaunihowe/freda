@@ -1214,7 +1214,7 @@ int board_qsearch(board_t *board, int alpha, int beta)
 	{
 		if (movelist[imove].capture == KING)
 			return 10000 - board->gubbins.nummoves;
-		movescore[imove]+= search_moveorder_pieces[movelist[imove].capture] + search_moveorder_pieces[movelist[imove].promotion];
+		movescore[imove] = search_moveorder_pieces[movelist[imove].capture] + search_moveorder_pieces[movelist[imove].promotion];
 	}	
 
 	for (imove = 0; imove < moves; ++imove)
