@@ -11,24 +11,21 @@
 #define VERSION_NAME	"Freda"
 #define VERSION_AUTHOR	"Shaun Howe"
 #define VERSION_MAJOR	0
-#define VERSION_MINOR	9
+#define VERSION_MINOR	99
 
 #define true 1
 #define false 0
 
 typedef struct {
-	int white_time_ms;
-	int black_time_ms;
-	int white_increment_ms;
-	int black_increment_ms;
-	int white_moves_remaining;
-	int black_moves_remaining;
+	int level_moves;
+	int level_time_cs;
+	int level_increment_cs;
+	int white_remaining_moves;
+	int black_remaining_moves;
+	int white_remaining_cs;
+	int black_remaining_cs;
 } clock_info_t;
-//const clock_info_t clock_template_allin1 = {6000,6000,0,0,-1,-1};
-//const clock_info_t clock_template_ccrltwoone = {12000,12000,100,100,-1,-1};
-//const clock_info_t clock_template_ccrl40in15 = {90000,90000,0,0,40,40};
-//const clock_info_t clock_template_fischerfivethree = {30000,30000,300,300,-1,-1};
-//const clock_info_t clock_template_fischertenfive = {60000,60000,500,500,-1,-1};
+//const clock_info_t clock_template_allin1 = {-1,6000,0,-1,-1,6000,6000};
 
 typedef enum {
 	status_turn_white,
@@ -46,7 +43,7 @@ typedef struct {
 	int depth_ext;
 	int depth_qs;
 	int score;
-	int time_ms;
+	int time_cs;
 	int nodes;
 	char pv[512];
 } search_output_t;
@@ -58,7 +55,7 @@ void api_showposition();
 game_status_t api_getstatus();
 void api_move(const char *move);
 void api_undomove();
-void api_go(search_output_t *search_output);
+void api_go(search_output_t *search_output, clock_info_t *search_clock);
 int api_busy();
 void api_stop();
 void api_update();

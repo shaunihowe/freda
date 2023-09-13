@@ -25,6 +25,7 @@ typedef struct {
 	board_t board;
 	int thinking;
 	clock_t starttime;
+	int endtime_cs;
 	jmp_buf checkpoint;
 	int depthreached;
 	int extdepthreached;

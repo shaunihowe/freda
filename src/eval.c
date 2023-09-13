@@ -15,8 +15,8 @@ int eval_rook_sqr[64];
 int eval_queen_sqr[64];
 int eval_king_sqr_mg[64];
 int eval_king_sqr_eg[64];
-int eval_pawn_doubled_penalty = 100;
-int eval_turn = 25;
+int eval_pawn_doubled_penalty;
+int eval_turn;
 
 const int eval_flip[64] = {
 	56,57,58,59,60,61,62,63,

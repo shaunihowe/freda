@@ -7,7 +7,6 @@
 
 board_t mainboard;
 search_t mainsearch;
-clock_info_t mainclock;
 search_output_t *mainsearch_output;
 
 void api_init()
@@ -70,10 +69,24 @@ void api_undomove()
 	return;
 }
 
-void api_go(search_output_t *search_output)
+void api_go(search_output_t *search_output, clock_info_t *search_clock)
 {
+	int movesremaining;
 	api_stop();
 	mainsearch_output = search_output;
+	if (mainboard.gubbins.turn == WHITE)
+	{
+		movesremaining = search_clock->white_remaining_moves;
+		if (movesremaining == 0){movesremaining = 32;}
+		mainsearch.endtime_cs = (search_clock->white_remaining_cs / movesremaining) + search_clock->level_increment_cs;
+	}
+	else if (mainboard.gubbins.turn == BLACK)
+	{
+		movesremaining = search_clock->black_remaining_moves;
+		if (movesremaining == 0){movesremaining = 32;}
+		mainsearch.endtime_cs = (search_clock->black_remaining_cs / movesremaining) + search_clock->level_increment_cs;
+	}
+	printf("# %i\n", mainsearch.endtime_cs);
 	search_start(&mainsearch, &mainboard);
 	return;
 }
@@ -103,7 +116,7 @@ void api_update()
 		strst+= board_sprintmove(&mainsearch_output->pv[strst - 1], &mainsearch.pv[0][pvi]);
 	}
 	mainsearch_output->score = mainsearch.score;
-	mainsearch_output->time_ms = (clock() - mainsearch.starttime) / (CLOCKS_PER_SEC / 100);
+	mainsearch_output->time_cs = (clock() - mainsearch.starttime) / (CLOCKS_PER_SEC / 100);
 	ui_updateoutput();
 	return;
 }
