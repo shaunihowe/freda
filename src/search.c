@@ -9,6 +9,7 @@ const int search_moveorder_pieces[] = {0, 0, 100, 300, 300, 500, 900, 10000};
 void search_init(search_t *search)
 {
 	search->starttime = clock();
+	search->endtime_cs = 5000;
 	search->depthreached = 0;
 	search->extdepthreached = 0;
 	search->qsdepthreached = 0;
@@ -60,7 +61,7 @@ void search_stop(search_t *search)
 
 void *thinkmove(void *searchp)
 {
-	int time_ms, i;
+	int time_cs, i;
 	search_t *search = (search_t*)searchp;
 	setjmp(search->checkpoint);
 	search->onpv = false;
@@ -72,10 +73,8 @@ void *thinkmove(void *searchp)
 		if ((search->score < -9900) || (search->score > 9900))
 			search->thinking = false;
 
-		time_ms = (clock() - search->starttime) / (CLOCKS_PER_SEC / 100);
-		if ((search->nodes > 350000) && (search->depthreached >= 6))
-			search->thinking = false; //*/
-		if ((search->thinking == false) || (time_ms > 0))
+		time_cs = (clock() - search->starttime) / (CLOCKS_PER_SEC / 100);
+		if ((search->thinking == false) || (time_cs > 0))
 			api_update();
 		search->onpv = true;
 	}
@@ -143,12 +142,11 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth)
 	if (search->nodes % 1024 == 0)
 	{
 		time_ms = (clock() - search->starttime) / (CLOCKS_PER_SEC / 100);
-		if (time_ms > 350)
-		{
+		if (time_ms >= search->endtime_cs)
 			search->thinking = false;
-			longjmp(search->checkpoint, 0);
-		}
 	}
+	if (search->thinking == false)
+		longjmp(search->checkpoint, 0);
 
 	search->pvl[search->depth] = search->depth;
 

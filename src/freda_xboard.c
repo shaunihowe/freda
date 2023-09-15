@@ -17,23 +17,21 @@ typedef enum
 xboard_mode mode;
 
 search_output_t search_output;
+clock_info_t search_clock = {0,6000,0,0,0,6000,6000};
 
 void modecheck()
 {
 	if (api_busy() == false)
 	{
 		if (mode == m_analyze)
-			api_go(&search_output);
-		else if (mode == m_go_white)
 		{
-			if (api_getstatus() == status_turn_white)
-				api_go(&search_output);
+			search_clock = (clock_info_t){0,99999900,0,0,0,99999900,99999900};
+			api_go(&search_output, &search_clock);
 		}
-		else if (mode == m_go_black)
-		{
-			if (api_getstatus() == status_turn_black)
-				api_go(&search_output);
-		}
+		else if ((mode == m_go_white)&&(api_getstatus() == status_turn_white))
+			api_go(&search_output, &search_clock);
+		else if ((mode == m_go_black)&&(api_getstatus() == status_turn_black))
+			api_go(&search_output, &search_clock);
 	}
 	return;
 }
@@ -45,11 +43,11 @@ void xboard_command()
     printf("feature myname=\"%s %i.%i\"\n", VERSION_NAME, VERSION_MAJOR, VERSION_MINOR);
     printf("feature playother=1\n");
     printf("feature usermove=0\n");
-    printf("feature time=0\n");
+    printf("feature time=1\n");
     printf("feature draw=0\n");
     printf("feature colors=1\n");
     printf("feature setboard=0\n");
-    printf("feature analyze=0\n");
+    printf("feature analyze=1\n");
     printf("feature sigint=0\n");
     printf("feature sigterm=0\n");
     printf("feature reuse=1\n");
@@ -60,7 +58,7 @@ void xboard_command()
 
 void ui_updateoutput()
 {
-	printf("%i %i %i %i ", search_output.depth, search_output.score, search_output.time_ms, search_output.nodes);
+	printf("%i %i %i %i ", search_output.depth, search_output.score, search_output.time_cs, search_output.nodes);
 	printf("%s\n", search_output.pv);
 	fflush(stdout);
 	return;
@@ -87,6 +85,7 @@ int main()
 	char input[2048], command[256];
 	char fenstring[256];
     char turn[2],castle[8],ep[2];
+	int m,t,i;
 	api_init();
 	mode = m_go_black;
 	int programclose = false;
@@ -102,6 +101,7 @@ int main()
 		{
 			api_init();
 			mode = m_go_black;
+			search_clock = (clock_info_t){0,6000,0,0,0,6000,6000};
 		}
 		else if (!strcmp(command, "force"))
 		{
@@ -119,6 +119,33 @@ int main()
 			mode = m_force;
 			api_stop();
 			mode = m_go_black;
+		}
+		else if (!strcmp(command, "level"))
+		{
+			sscanf(input, "level %i %i %i", &m,&t,&i);
+			search_clock.level_moves = m;
+			search_clock.level_time_cs = t;
+			search_clock.level_increment_cs = i;
+			search_clock.white_remaining_moves = m;
+			search_clock.black_remaining_moves = m;
+			search_clock.white_remaining_cs = t;
+			search_clock.black_remaining_cs = t;
+		}
+		else if (!strcmp(command, "time"))
+		{
+			sscanf(input, "time %i", &t);
+			if (mode == m_go_white)
+				search_clock.white_remaining_cs = t;
+			else if (mode == m_go_black)
+				search_clock.black_remaining_cs = t;
+		}
+		else if (!strcmp(command, "otim"))
+		{
+			sscanf(input, "time %i", &t);
+			if (mode == m_go_white)
+				search_clock.black_remaining_cs = t;
+			else if (mode == m_go_black)
+				search_clock.white_remaining_cs = t;
 		}
 		else if (!strcmp(command, "go"))
 		{
