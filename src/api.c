@@ -86,6 +86,8 @@ void api_go(search_output_t *search_output, clock_info_t *search_clock)
 		if (movesremaining == 0){movesremaining = 32;}
 		mainsearch.endtime_cs = (search_clock->black_remaining_cs / movesremaining) + search_clock->level_increment_cs;
 	}
+	if (mainsearch.endtime_cs < 5)
+		mainsearch.endtime_cs = 5;
 	printf("# %i\n", mainsearch.endtime_cs);
 	search_start(&mainsearch, &mainboard);
 	return;
