@@ -1,5 +1,5 @@
 CC     = cc
-COPTS  = -g -Wall -O3 -s
+COPTS  = -g -Wall -O3 -march=native -flto -s
 LIBS   = -lpthread -lm
 
 all: compile
