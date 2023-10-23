@@ -16,6 +16,10 @@ int eval_queen_sqr[64];
 int eval_king_sqr_mg[64];
 int eval_king_sqr_eg[64];
 int eval_pawn_doubled_penalty;
+int eval_pawn_isolated_penalty;
+int eval_pawn_backward_penalty;
+int eval_rook_semiopen;
+int eval_rook_open;
 int eval_turn;
 
 const int eval_flip[64] = {
@@ -50,7 +54,7 @@ int eval_probtocp(float evalf)
 
 int eval_full(const board_t *board)
 {
-	uint64_t bb;
+	uint64_t bb, bb2;
 	int sp, sqr;
 	int matemat[2] = {0, 0};
 	int numpawns[2] = {0, 0};
@@ -76,6 +80,10 @@ int eval_full(const board_t *board)
 			mg[WHITE] += eval_pawn_passed_sqr[sqr];
 		if (board->bb[WHITE] & board->bb[PAWN] & bb_line_s[sqr])
 			mg[WHITE] -= eval_pawn_doubled_penalty;
+		if (!(board->bb[WHITE] & board->bb[PAWN] & bb_pawn_isolated[sqr]))
+			mg[WHITE] -= eval_pawn_isolated_penalty;
+		else if ((board->bb[WHITE] & board->bb[PAWN] & bb_pawn_passed_white[sqr]) && !(board->bb[WHITE] & board->bb[PAWN] & bb_pawn_passed_black[sqr]))
+			mg[WHITE] -= eval_pawn_backward_penalty;
 	}
 	// Black Pawns
 	bb = board->bb[BLACK] & board->bb[PAWN];
@@ -89,6 +97,10 @@ int eval_full(const board_t *board)
 			mg[BLACK] += eval_pawn_passed_sqr[eval_flip[sqr]];
 		if (board->bb[BLACK] & board->bb[PAWN] & bb_line_n[sqr])
 			mg[BLACK] -= eval_pawn_doubled_penalty;
+		if (!(board->bb[BLACK] & board->bb[PAWN] & bb_pawn_isolated[sqr]))
+			mg[BLACK] -= eval_pawn_isolated_penalty;
+		else if ((board->bb[BLACK] & board->bb[PAWN] & bb_pawn_passed_black[sqr]) && !(board->bb[BLACK] & board->bb[PAWN] & bb_pawn_passed_white[sqr]))
+			mg[BLACK] -= eval_pawn_backward_penalty;
 	}
 	// White Bishops
 	bb = board->bb[WHITE] & board->bb[BISHOP];
@@ -139,6 +151,11 @@ int eval_full(const board_t *board)
 	{
 		sqr = BIT_POPLSB(&bb);
 		mg[WHITE] += eval_rook_sqr[sqr];
+		bb2 = board->bb[PAWN] & bb_file_mask[sqr];
+		if (!bb2)
+			mg[WHITE] += eval_rook_open;
+		else if (!(bb2 & board->bb[WHITE]))
+			mg[WHITE] += eval_rook_semiopen;
 	}
 	// Black Rooks
 	bb = board->bb[BLACK] & board->bb[ROOK];
@@ -149,6 +166,11 @@ int eval_full(const board_t *board)
 	{
 		sqr = BIT_POPLSB(&bb);
 		mg[BLACK] += eval_rook_sqr[eval_flip[sqr]];
+		bb2 = board->bb[PAWN] & bb_file_mask[sqr];
+		if (!bb2)
+			mg[BLACK] += eval_rook_open;
+		else if (!(bb2 & board->bb[BLACK]))
+			mg[BLACK] += eval_rook_semiopen;
 	}
 	// White Queens
 	bb = board->bb[WHITE] & board->bb[QUEEN];

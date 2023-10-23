@@ -16,6 +16,39 @@ void api_init()
 	weights_init();
 	search_init(&mainsearch);
 	api_setposition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq 0 1");
+
+	/*printf("const uint64_t bb_pawn_isolated[64] = {\n");
+	uint64_t bb;
+	int sqr, file;
+	for (int rank = 0; rank < 8; rank++)
+	{
+		bb = bb_file[0] | bb_file[1];
+		BIT_CLEAR(bb, (rank * 8) + 0);
+		printf("\t0x%lx,",bb);
+		bb = bb_file[0] | bb_file[1] | bb_file[2];
+		BIT_CLEAR(bb, (rank * 8) + 1);
+		printf("0x%lx,",bb);
+		bb = bb_file[1] | bb_file[2] | bb_file[3];
+		BIT_CLEAR(bb, (rank * 8) + 2);
+		printf("0x%lx,",bb);
+		bb = bb_file[2] | bb_file[3] | bb_file[4];
+		BIT_CLEAR(bb, (rank * 8) + 3);
+		printf("0x%lx,",bb);
+		bb = bb_file[3] | bb_file[4] | bb_file[5];
+		BIT_CLEAR(bb, (rank * 8) + 4);
+		printf("0x%lx,",bb);
+		bb = bb_file[4] | bb_file[5] | bb_file[6];
+		BIT_CLEAR(bb, (rank * 8) + 5);
+		printf("0x%lx,",bb);
+		bb = bb_file[5] | bb_file[6] | bb_file[7];
+		BIT_CLEAR(bb, (rank * 8) + 6);
+		printf("0x%lx,",bb);
+		bb = bb_file[6] | bb_file[7];
+		BIT_CLEAR(bb, (rank * 8) + 7);
+		printf("0x%lx,\n",bb);
+	}
+	printf("};"); //*/
+
 	return;
 }
 
@@ -86,9 +119,9 @@ void api_go(search_output_t *search_output, clock_info_t *search_clock)
 		if (movesremaining == 0){movesremaining = 32;}
 		mainsearch.endtime_cs = (search_clock->black_remaining_cs / movesremaining) + search_clock->level_increment_cs;
 	}
+	mainsearch.endtime_cs = mainsearch.endtime_cs - 5;
 	if (mainsearch.endtime_cs < 5)
 		mainsearch.endtime_cs = 5;
-	printf("# %i\n", mainsearch.endtime_cs);
 	search_start(&mainsearch, &mainboard);
 	return;
 }
@@ -111,6 +144,7 @@ void api_update()
 	mainsearch_output->depth_ext = mainsearch.extdepthreached;
 	mainsearch_output->depth_qs = mainsearch.qsdepthreached;
 	mainsearch_output->nodes = mainsearch.nodes;
+	mainsearch_output->hashhits = mainsearch.hashhits;
 	mainsearch_output->pv[0] = 0;
 	strst = 1;
 	for (pvi=0;pvi<mainsearch.pvl[0];++pvi)

@@ -20,5 +20,6 @@ void weights_init();
 void weights_push(int *w);
 void weights_pull(int *w);
 void weights_export();
+void weights_tune();
 
 #endif

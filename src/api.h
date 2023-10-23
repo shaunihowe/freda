@@ -45,6 +45,7 @@ typedef struct {
 	int score;
 	int time_cs;
 	int nodes;
+	int hashhits;
 	char pv[512];
 } search_output_t;
 

@@ -33,14 +33,6 @@ int board_generatemoves(board_t *board, move_t *movelist);
 void board_addmove(board_t *board, move_t *move, uint8_t source, uint8_t destination, uint8_t promotion);
 void board_nextmove(move_t *movelist, int *movescore, int moves, int next);
 
-void board_randomposition(board_t *board);
-
 int board_qsearch(board_t *board, int alpha, int beta);
 
 #endif
-// 31  4   move_t move
-// 32  4   int score
-// 32  4   int status
-// 32  4   int nodes
-// 32  4   int next
-// 32  4   int child

@@ -5,7 +5,7 @@
 #ifndef __INC_EVAL_WEIGHTS_DEFAULT__
 #define __INC_EVAL_WEIGHTS_DEFAULT__
 
-// 522 Weights
+// 526 Weights
 
 int eval_weights_default[] = {
 	// eval_piece_value
@@ -83,7 +83,15 @@ int eval_weights_default[] = {
 	  -3, 100, 130,  85,  85, 130, 100,  -3,
 	-228, -78,  -8, -73, -73,  -8, -78,-228,
 	// eval_pawn_doubled_penalty
+	 140,
+	// eval_pawn_isolated_penalty
 	 100,
+	// eval_pawn_backward_penalty
+	 70,
+	// eval_rook_semiopen
+	 100,
+	// eval_rook_open
+	 150,
 	// eval_turn
 	  25,
 	// end of eval_weights_default[]
