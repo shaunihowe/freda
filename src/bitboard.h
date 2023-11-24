@@ -19,8 +19,7 @@ extern const uint64_t bb_pawn_attack_white[64];
 extern const uint64_t bb_pawn_attack_black[64];
 extern const uint64_t bb_pawn_passed_white[64];
 extern const uint64_t bb_pawn_passed_black[64];
-extern uint64_t bb_pawn_square_white[64];
-extern uint64_t bb_pawn_square_black[64];
+extern const uint64_t bb_pawn_isolated[64];
 extern const uint64_t bb_knight_move[64];
 extern const uint64_t bb_diag_ne[64];
 extern const uint64_t bb_diag_se[64];
@@ -52,6 +51,9 @@ extern const uint64_t bb_diagdown_mask[64];
 extern const uint64_t bb_diagup_mask[64];
 extern const uint64_t bb_rank[8];
 extern const uint64_t bb_file[8];
+extern const uint64_t bb_lightsquares;
+extern const uint64_t bb_darksquares;
+
 
 #endif
 
