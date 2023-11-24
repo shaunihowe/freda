@@ -6,9 +6,13 @@
 
 #include <math.h>
 
-int eval_piece_value[8];
+int eval_pawn_value;
+int eval_bishop_value[2];
+int eval_knight_value[2];
+int eval_rook_value[2];
+int eval_queen_value[2];
 int eval_pawn_sqr[64];
-int eval_pawn_passed_sqr[64];
+int eval_pawn_passed[64];
 int eval_bishop_sqr[64];
 int eval_knight_sqr[64];
 int eval_rook_sqr[64];
@@ -17,9 +21,10 @@ int eval_king_sqr_mg[64];
 int eval_king_sqr_eg[64];
 int eval_pawn_doubled_penalty;
 int eval_pawn_isolated_penalty;
-int eval_pawn_backward_penalty;
+int eval_bishop_both;
 int eval_rook_semiopen;
 int eval_rook_open;
+int eval_king_pawns[4];
 int eval_turn;
 
 const int eval_flip[64] = {
@@ -71,42 +76,42 @@ int eval_full(const board_t *board)
 	// White Pawns
 	bb = board->bb[WHITE] & board->bb[PAWN];
 	numpawns[WHITE] = sp = BIT_POPCOUNT(bb);
-	mg[WHITE] += eval_piece_value[PAWN] * sp;
+	mg[WHITE] += eval_pawn_value * sp;
 	while (bb)
 	{
 		sqr = BIT_POPLSB(&bb);
 		mg[WHITE] += eval_pawn_sqr[sqr];
 		if (!(board->bb[BLACK] & board->bb[PAWN] & bb_pawn_passed_white[sqr]))
-			mg[WHITE] += eval_pawn_passed_sqr[sqr];
+			mg[WHITE] += eval_pawn_passed[sqr];
 		if (board->bb[WHITE] & board->bb[PAWN] & bb_line_s[sqr])
 			mg[WHITE] -= eval_pawn_doubled_penalty;
 		if (!(board->bb[WHITE] & board->bb[PAWN] & bb_pawn_isolated[sqr]))
 			mg[WHITE] -= eval_pawn_isolated_penalty;
-		else if ((board->bb[WHITE] & board->bb[PAWN] & bb_pawn_passed_white[sqr]) && !(board->bb[WHITE] & board->bb[PAWN] & bb_pawn_passed_black[sqr]))
-			mg[WHITE] -= eval_pawn_backward_penalty;
 	}
 	// Black Pawns
 	bb = board->bb[BLACK] & board->bb[PAWN];
 	numpawns[BLACK] = sp = BIT_POPCOUNT(bb);
-	mg[BLACK] += eval_piece_value[PAWN] * sp;
+	mg[BLACK] += eval_pawn_value * sp;
 	while (bb)
 	{
 		sqr = BIT_POPLSB(&bb);
 		mg[BLACK] += eval_pawn_sqr[eval_flip[sqr]];
 		if (!(board->bb[WHITE] & board->bb[PAWN] & bb_pawn_passed_black[sqr]))
-			mg[BLACK] += eval_pawn_passed_sqr[eval_flip[sqr]];
+			mg[BLACK] += eval_pawn_passed[eval_flip[sqr]];
 		if (board->bb[BLACK] & board->bb[PAWN] & bb_line_n[sqr])
 			mg[BLACK] -= eval_pawn_doubled_penalty;
 		if (!(board->bb[BLACK] & board->bb[PAWN] & bb_pawn_isolated[sqr]))
 			mg[BLACK] -= eval_pawn_isolated_penalty;
-		else if ((board->bb[BLACK] & board->bb[PAWN] & bb_pawn_passed_black[sqr]) && !(board->bb[BLACK] & board->bb[PAWN] & bb_pawn_passed_white[sqr]))
-			mg[BLACK] -= eval_pawn_backward_penalty;
 	}
 	// White Bishops
 	bb = board->bb[WHITE] & board->bb[BISHOP];
 	numminor[WHITE] += sp = BIT_POPCOUNT(bb);
-	mg[WHITE] += eval_piece_value[BISHOP] * sp;
+	sqr = eval_bishop_value[1] * numpawns[WHITE];
+	sqr += eval_bishop_value[0] * (8 - numpawns[WHITE]);
+	mg[WHITE] += (sqr / 8) * sp;
 	stage[WHITE] += sp;
+	if ((bb & bb_lightsquares) && (bb & bb_darksquares))
+		mg[WHITE] += eval_bishop_both;
 	while (bb)
 	{
 		sqr = BIT_POPLSB(&bb);
@@ -115,8 +120,12 @@ int eval_full(const board_t *board)
 	// Black Bishops
 	bb = board->bb[BLACK] & board->bb[BISHOP];
 	numminor[BLACK] += sp = BIT_POPCOUNT(bb);
-	mg[BLACK] += eval_piece_value[BISHOP] * sp;
+	sqr = eval_bishop_value[1] * numpawns[BLACK];
+	sqr += eval_bishop_value[0] * (8 - numpawns[BLACK]);
+	mg[BLACK] += (sqr / 8) * sp;
 	stage[BLACK] += sp;
+	if ((bb & bb_lightsquares) && (bb & bb_darksquares))
+		mg[BLACK] += eval_bishop_both;
 	while (bb)
 	{
 		sqr = BIT_POPLSB(&bb);
@@ -125,7 +134,9 @@ int eval_full(const board_t *board)
 	// White Knights
 	bb = board->bb[WHITE] & board->bb[KNIGHT];
 	numminor[WHITE] += sp = BIT_POPCOUNT(bb);
-	mg[WHITE] += eval_piece_value[KNIGHT] * sp;
+	sqr = eval_knight_value[1] * numpawns[WHITE];
+	sqr += eval_knight_value[0] * (8 - numpawns[WHITE]);
+	mg[WHITE] += (sqr / 8) * sp;
 	stage[WHITE] += sp;
 	while (bb)
 	{
@@ -135,7 +146,9 @@ int eval_full(const board_t *board)
 	// Black Knights
 	bb = board->bb[BLACK] & board->bb[KNIGHT];
 	numminor[BLACK] += sp = BIT_POPCOUNT(bb);
-	mg[BLACK] += eval_piece_value[KNIGHT] * sp;
+	sqr = eval_knight_value[1] * numpawns[BLACK];
+	sqr += eval_knight_value[0] * (8 - numpawns[BLACK]);
+	mg[BLACK] += (sqr / 8) * sp;
 	stage[BLACK] += sp;
 	while (bb)
 	{
@@ -145,7 +158,9 @@ int eval_full(const board_t *board)
 	// White Rooks
 	bb = board->bb[WHITE] & board->bb[ROOK];
 	nummajor[WHITE] += sp = BIT_POPCOUNT(bb);
-	mg[WHITE] += eval_piece_value[ROOK] * sp;
+	sqr = eval_rook_value[1] * numpawns[WHITE];
+	sqr += eval_rook_value[0] * (8 - numpawns[WHITE]);
+	mg[WHITE] += (sqr / 8) * sp;
 	stage[WHITE] += sp * 2;
 	while (bb)
 	{
@@ -160,7 +175,9 @@ int eval_full(const board_t *board)
 	// Black Rooks
 	bb = board->bb[BLACK] & board->bb[ROOK];
 	nummajor[BLACK] += sp = BIT_POPCOUNT(bb);
-	mg[BLACK] += eval_piece_value[ROOK] * sp;
+	sqr = eval_rook_value[1] * numpawns[BLACK];
+	sqr += eval_rook_value[0] * (8 - numpawns[BLACK]);
+	mg[BLACK] += (sqr / 8) * sp;
 	stage[BLACK] += sp * 2;
 	while (bb)
 	{
@@ -175,7 +192,9 @@ int eval_full(const board_t *board)
 	// White Queens
 	bb = board->bb[WHITE] & board->bb[QUEEN];
 	nummajor[WHITE] += sp = BIT_POPCOUNT(bb);
-	mg[WHITE] += eval_piece_value[QUEEN] * sp;
+	sqr = eval_queen_value[1] * numpawns[WHITE];
+	sqr += eval_queen_value[0] * (8 - numpawns[WHITE]);
+	mg[WHITE] += (sqr / 8) * sp;
 	stage[WHITE] += sp * 4;
 	while (bb)
 	{
@@ -185,19 +204,27 @@ int eval_full(const board_t *board)
 	// Black Queens
 	bb = board->bb[BLACK] & board->bb[QUEEN];
 	nummajor[BLACK] += sp = BIT_POPCOUNT(bb);
-	mg[BLACK] += eval_piece_value[QUEEN] * sp;
+	sqr = eval_queen_value[1] * numpawns[BLACK];
+	sqr += eval_queen_value[0] * (8 - numpawns[BLACK]);
+	mg[BLACK] += (sqr / 8) * sp;
 	stage[BLACK] += sp * 4;
 	while (bb)
 	{
 		sqr = BIT_POPLSB(&bb);
 		mg[BLACK] += eval_queen_sqr[eval_flip[sqr]];
 	}
-	eg[WHITE] = mg[WHITE];
-	eg[BLACK] = mg[BLACK];
 	// White King
+	sp = BIT_POPCOUNT(board->bb[WHITE] & board->bb[PAWN] & bb_king_move[board->gubbins.wkpos]);
+	if (sp > 3){sp = 3;}
+	mg[WHITE] += eval_king_pawns[sp];
+	eg[WHITE] = mg[WHITE];
 	mg[WHITE] += eval_king_sqr_mg[board->gubbins.wkpos];
 	eg[WHITE] += eval_king_sqr_eg[board->gubbins.wkpos];
 	// Black King
+	sp = BIT_POPCOUNT(board->bb[BLACK] & board->bb[PAWN] & bb_king_move[board->gubbins.bkpos]);
+	if (sp > 3){sp = 3;}
+	mg[BLACK] += eval_king_pawns[sp];
+	eg[BLACK] = mg[BLACK];
 	mg[BLACK] += eval_king_sqr_mg[eval_flip[board->gubbins.bkpos]];
 	eg[BLACK] += eval_king_sqr_eg[eval_flip[board->gubbins.bkpos]];
 

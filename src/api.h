@@ -11,7 +11,7 @@
 #define VERSION_NAME	"Freda"
 #define VERSION_AUTHOR	"Shaun Howe"
 #define VERSION_MAJOR	0
-#define VERSION_MINOR	99
+#define VERSION_MINOR	999
 
 #define true 1
 #define false 0
@@ -38,11 +38,18 @@ typedef enum {
 	status_result_draw_50move
 } game_status_t;
 
+typedef enum {
+	scorebound_exact,
+	scorebound_lower,
+	scorebound_upper
+} scorebound_t;
+
 typedef struct {
 	int depth;
 	int depth_ext;
 	int depth_qs;
 	int score;
+	scorebound_t scorebound;
 	int time_cs;
 	int nodes;
 	int hashhits;

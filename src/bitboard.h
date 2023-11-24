@@ -51,6 +51,9 @@ extern const uint64_t bb_diagdown_mask[64];
 extern const uint64_t bb_diagup_mask[64];
 extern const uint64_t bb_rank[8];
 extern const uint64_t bb_file[8];
+extern const uint64_t bb_lightsquares;
+extern const uint64_t bb_darksquares;
+
 
 #endif
 

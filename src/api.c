@@ -47,7 +47,17 @@ void api_init()
 		BIT_CLEAR(bb, (rank * 8) + 7);
 		printf("0x%lx,\n",bb);
 	}
-	printf("};"); //*/
+	printf("};");
+	uint64_t bbl = 0, bbd = 0;
+	int sqr;
+	for (sqr = 0; sqr < 64; sqr++)
+		if (sqr % 2 == 0)
+			BIT_SET(bbd, sqr);
+		else
+			BIT_SET(bbl, sqr);
+	printf("const uint64_t bb_lightsquares = 0x%lx;\n", bbl);
+	printf("const uint64_t bb_darksquares = 0x%lx;\n", bbd);
+	fflush(stdout); //*/
 
 	return;
 }
@@ -110,13 +120,13 @@ void api_go(search_output_t *search_output, clock_info_t *search_clock)
 	if (mainboard.gubbins.turn == WHITE)
 	{
 		movesremaining = search_clock->white_remaining_moves;
-		if (movesremaining == 0){movesremaining = 32;}
+		if (movesremaining == 0){movesremaining = 24;}
 		mainsearch.endtime_cs = (search_clock->white_remaining_cs / movesremaining) + search_clock->level_increment_cs;
 	}
 	else if (mainboard.gubbins.turn == BLACK)
 	{
 		movesremaining = search_clock->black_remaining_moves;
-		if (movesremaining == 0){movesremaining = 32;}
+		if (movesremaining == 0){movesremaining = 24;}
 		mainsearch.endtime_cs = (search_clock->black_remaining_cs / movesremaining) + search_clock->level_increment_cs;
 	}
 	mainsearch.endtime_cs = mainsearch.endtime_cs - 5;
@@ -152,6 +162,7 @@ void api_update()
 		strst+= board_sprintmove(&mainsearch_output->pv[strst - 1], &mainsearch.pv[0][pvi]);
 	}
 	mainsearch_output->score = mainsearch.score;
+	mainsearch_output->scorebound = mainsearch.scorebound;
 	mainsearch_output->time_cs = (clock() - mainsearch.starttime) / (CLOCKS_PER_SEC / 100);
 	ui_updateoutput();
 	return;
