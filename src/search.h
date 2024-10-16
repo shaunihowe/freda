@@ -18,7 +18,7 @@ typedef struct {
 	int extdepthreached;
 	int qsdepthreached;
 	int score;
-        scorebound_t scorebound;
+	scorebound_t scorebound;
 	int nodes;
 	int hashhits;
 	move_t bestmove;
@@ -38,13 +38,13 @@ void search_stop(search_t *search);
 
 void *thinkmove(void *searchp);
 
-int search_alphabeta(search_t *search, int alpha, int beta, int depth);
+int search_alphabeta(search_t *search, int alpha, int beta, int depth, int nullmove);
 int search_qsearch(search_t *search, int alpha, int beta);
 
-int search_alphabeta_alphatest(search_t *search, int alpha, int depth);
-int search_alphabeta_betatest(search_t *search, int beta, int depth);
-int search_alphabeta_alphafirst(search_t *search, int alpha, int beta, int depth);
-int search_alphabeta_betafirst(search_t *search, int alpha, int beta, int depth);
+int search_alphabeta_alphatest(search_t *search, int alpha, int depth, int nullmove);
+int search_alphabeta_betatest(search_t *search, int beta, int depth, int nullmove);
+int search_alphabeta_alphafirst(search_t *search, int alpha, int beta, int depth, int nullmove);
+int search_alphabeta_betafirst(search_t *search, int alpha, int beta, int depth, int nullmove);
 
 int search_rankmoves_withhash(search_t * search, move_t *movelist, int *movescore, int moves);
 int search_rankmoves(search_t * search, move_t *movelist, int *movescore, int moves);
