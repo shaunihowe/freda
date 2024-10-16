@@ -77,7 +77,7 @@ void *thinkmove(void *searchp)
 			repeat = false;
 			lower = search->score - window;
 			upper = search->score + window;
-			search->score = search_alphabeta(search,lower,upper,search->depthreached);
+			search->score = search_alphabeta(search,lower,upper,search->depthreached, 1);
 			search->scorebound = scorebound_exact;
 			if (search->score <= lower)
 			{
@@ -111,11 +111,12 @@ void *thinkmove(void *searchp)
 	return NULL;
 }
 
-int search_alphabeta(search_t *search, int alpha, int beta, int depth)
+int search_alphabeta(search_t *search, int alpha, int beta, int depth, int nullmove)
 {
 	move_t movelist[128];
 	int movescore[128];
 	int moves, spscore, imove, foundmove, pvi, legalmoves, ischeck, iscastle, reps, time_ms, useddepth, reduce;
+	gubbins_t nullgubbins;
 	uint64_t hashkey;
 	hash_t *hashentry;
 	board_t *board;
@@ -150,11 +151,13 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth)
 		{
 			if (hashentry->betascore >= beta)
 			{
-				search->hashhits++;return beta;
+				search->hashhits++;
+				return beta;
 			}
 			if ((hashentry->alpha == 1)&&(hashentry->betascore <= alpha))
 			{
-				search->hashhits++;return alpha;
+				search->hashhits++;
+				return alpha;
 			}
 		}
 	}
@@ -178,6 +181,23 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth)
 	if (search->depth >= MAXPLY - 1)
 		return eval_full(board);
 
+	if (!search->onpv && nullmove && !ischeck && search->depth > 0 && depth > 3)
+	{
+		// todo: try null move (if not in check and not onpv)
+		nullgubbins = board->gubbins;
+		board->gubbins.hash ^= hash_ep[board->gubbins.ep];
+		board->gubbins.ep = 0;
+		board->gubbins.hash ^= hash_ep[board->gubbins.ep];
+		board->gubbins.hash ^= hash_turn[board->gubbins.turn];
+		board->gubbins.turn = 1 - board->gubbins.turn;
+		board->gubbins.hash ^= hash_turn[board->gubbins.turn];
+		spscore = -search_alphabeta_alphatest(search, -beta, (useddepth = (depth - 2)) - 1, 0);
+		board->gubbins = nullgubbins;
+		// if reduced search is >= beta then return beta
+		if (spscore >= beta)
+			return beta;
+	}
+
 	legalmoves = 0;
 	moves = board_generatecaptures(board, movelist);
 	moves += board_generatemoves(board, &movelist[moves]);
@@ -199,6 +219,27 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth)
 			continue;
 		if ((iscastle > 0) && (ischeck))
 			continue;
+
+		// calculate late move reductions
+		reduce = 0;
+		if ((foundmove) || (imove == 0) || (ischeck))
+			// don't reduce on mainlines, 1st moves or if in check
+			reduce = 0;
+		else if ((depth > 3) && (movescore[imove] < alpha))
+		{
+			if (imove < 3)
+				// lets only reduce by 1 on 2nd and 3rd moves
+				reduce = 1;
+			else if (depth < 9)
+				reduce = 2;
+			else
+			{
+				reduce = 2 + ((alpha - movescore[imove]) / 100);
+				if (reduce > depth / 3)
+					reduce = depth / 3;
+			}
+		}
+
 		board_domove(board, &movelist[imove]);search->depth++;
 		// Test the move doesn't put our king under attack (illegal move!)
 		if (board_checktest(board, 1 - board->gubbins.turn))
@@ -208,22 +249,14 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth)
 		}
 		legalmoves++;
 
-		if ((foundmove)&&(imove < 2))
-			spscore = -search_alphabeta(search, -beta, -alpha, (useddepth = depth) - 1);
-		else if ((!foundmove)&&(depth > 3)&&(movescore[imove] <= alpha)&&(!ischeck))
+		if (reduce)
 		{
-			if ((imove > 10)&&(depth > 6))
-				reduce = 1 + (depth / 2);
-			if (imove > 5)
-				reduce = 1 + (depth / 3);
-			else
-				reduce = 1;
-			spscore = -search_alphabeta_betatest(search, -alpha, (useddepth = (depth - reduce)) - 1);
+			spscore = -search_alphabeta_betatest(search, -alpha, (useddepth = (depth - reduce)) - 1, 1);
 			if (spscore > alpha)
-				spscore = -search_alphabeta(search, -beta, -alpha, (useddepth = depth) - 1);
+				spscore = -search_alphabeta(search, -beta, -alpha, (useddepth = depth) - 1, 1);
 		}
 		else
-			spscore = -search_alphabeta(search, -beta, -alpha, (useddepth = depth) - 1);
+			spscore = -search_alphabeta(search, -beta, -alpha, (useddepth = depth) - 1, 1);
 
 		board_undomove(board);--search->depth;
 		if (spscore > alpha)
@@ -276,17 +309,20 @@ int search_qsearch(search_t *search, int alpha, int beta)
 	{
 		if (hashentry->betascore >= beta)
 		{
-			search->hashhits++;return beta;
+			search->hashhits++;
+			return beta;
 		}
 		if (hashentry->alpha == 1)
 		{
 			if (hashentry->betascore <= alpha)
 			{
-				search->hashhits++;return alpha;
+				search->hashhits++;
+				return alpha;
 			}
 			else
 			{
-				search->hashhits++;return hashentry->betascore;
+				search->hashhits++;
+				return hashentry->betascore;
 			}
 		}
 		if (hashentry->betascore > alpha)
@@ -303,19 +339,21 @@ int search_qsearch(search_t *search, int alpha, int beta)
 	if (search->depth >= MAXPLY - 1)
 		return eval_full(board);
 
+	// use standing pat and only search captures
 	spscore = eval_full(board);
 	if (spscore >= beta)
 		return beta;
 	if (spscore > alpha)
 		alpha = spscore;
-
 	moves = board_generatecaptures(board, movelist);
+
 	if (search_rankmoves(search, movelist, movescore, moves) == 2)
-		return 10000;
+		return 8000;
 
 	for (imove = 0; imove < moves; ++imove)
 	{
 		board_nextmove(movelist, movescore, moves, imove);
+
 		board_domove(board, &movelist[imove]);search->depth++;
 		spscore = -search_qsearch(search, -beta, -alpha);
 		board_undomove(board);--search->depth;
@@ -333,28 +371,28 @@ int search_qsearch(search_t *search, int alpha, int beta)
 	return alpha;
 }
 
-int search_alphabeta_alphatest(search_t *search, int alpha, int depth)
+int search_alphabeta_alphatest(search_t *search, int alpha, int depth, int nullmove)
 {
-	return search_alphabeta(search, alpha, alpha+1, depth);
+	return search_alphabeta(search, alpha, alpha+1, depth, nullmove);
 }
 
-int search_alphabeta_betatest(search_t *search, int beta, int depth)
+int search_alphabeta_betatest(search_t *search, int beta, int depth, int nullmove)
 {
-	return search_alphabeta(search, beta-1, beta, depth);
+	return search_alphabeta(search, beta-1, beta, depth, nullmove);
 }
 
-int search_alphabeta_alphafirst(search_t *search, int alpha, int beta, int depth)
+int search_alphabeta_alphafirst(search_t *search, int alpha, int beta, int depth, int nullmove)
 {
-	if (search_alphabeta_alphatest(search, alpha, depth) <= alpha)
+	if (search_alphabeta_alphatest(search, alpha, depth, nullmove) <= alpha)
 		return alpha;
-	return search_alphabeta(search, alpha, beta, depth);
+	return search_alphabeta(search, alpha, beta, depth, nullmove);
 }
 
-int search_alphabeta_betafirst(search_t *search, int alpha, int beta, int depth)
+int search_alphabeta_betafirst(search_t *search, int alpha, int beta, int depth, int nullmove)
 {
-	if (search_alphabeta_betatest(search, beta, depth) >= beta)
+	if (search_alphabeta_betatest(search, beta, depth, nullmove) >= beta)
 		return beta;
-	return search_alphabeta(search, alpha, beta, depth);
+	return search_alphabeta(search, alpha, beta, depth, nullmove);
 }
 
 int search_rankmoves_withhash(search_t *search, move_t *movelist, int *movescore, int moves)

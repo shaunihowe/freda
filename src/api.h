@@ -10,8 +10,8 @@
 
 #define VERSION_NAME	"Freda"
 #define VERSION_AUTHOR	"Shaun Howe"
-#define VERSION_MAJOR	0
-#define VERSION_MINOR	999
+#define VERSION_MAJOR	1
+#define VERSION_MINOR	0
 
 #define true 1
 #define false 0

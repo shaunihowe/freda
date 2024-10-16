@@ -46,7 +46,7 @@ void xboard_command()
     printf("feature time=1\n");
     printf("feature draw=0\n");
     printf("feature colors=1\n");
-    printf("feature setboard=0\n");
+    printf("feature setboard=1\n");
     printf("feature analyze=1\n");
     printf("feature sigint=0\n");
     printf("feature sigterm=0\n");

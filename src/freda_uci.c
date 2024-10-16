@@ -35,8 +35,14 @@ void ui_updateoutput()
 	if (search_output.time_cs == 0)
 		search_output.time_cs = 1;
 	printf("info depth %i seldepth %i ", search_output.depth, search_output.depth_qs);
-	printf("time %i hashfull %i nodes %i nps %i ", search_output.time_cs * 10, (1000 - (search_output.hashhits * 1000) / (search_output.hashhits + search_output.nodes)), search_output.nodes, (search_output.nodes / search_output.time_cs) * 100);
+	printf("time %i ", search_output.time_cs * 10);
+	printf("hashfull %i ", (1000 - (search_output.hashhits * 1000) / (search_output.hashhits + search_output.nodes)));
+	printf("nodes %i nps %i ", search_output.nodes, (search_output.nodes / search_output.time_cs) * 100);
 	printf("score cp %i ", search_output.score);
+	if (search_output.scorebound == scorebound_lower)
+		   printf("lowerbound ");
+	else if (search_output.scorebound == scorebound_upper)
+		   printf("upperbound ");
 	printf("pv %s\n", search_output.pv);
 	fflush(stdout);
 	return;
