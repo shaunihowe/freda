@@ -230,14 +230,8 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth, int nullm
 			if (imove < 3)
 				// lets only reduce by 1 on 2nd and 3rd moves
 				reduce = 1;
-			else if (depth < 9)
-				reduce = 2;
 			else
-			{
-				reduce = 2 + ((alpha - movescore[imove]) / 100);
-				if (reduce > depth / 3)
-					reduce = depth / 3;
-			}
+				reduce = 2;
 		}
 
 		board_domove(board, &movelist[imove]);search->depth++;
