@@ -40,7 +40,7 @@ void xboard_command()
 {
     printf("feature done=0\n");             // tell xboard to wait for all feature tags
     fflush(stdout);
-    printf("feature myname=\"%s %i.%i\"\n", VERSION_NAME, VERSION_MAJOR, VERSION_MINOR);
+    printf("feature myname=\"%s %i.%i\"\n", version_name, version_major, version_minor);
     printf("feature playother=1\n");
     printf("feature usermove=0\n");
     printf("feature time=1\n");

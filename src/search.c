@@ -4,8 +4,6 @@
 
 #include "defs.h"
 
-const int search_moveorder_pieces[] = {0, 0, 100, 300, 300, 500, 900, 10000};
-
 void search_init(search_t *search)
 {
 	search->starttime = clock();
@@ -14,7 +12,6 @@ void search_init(search_t *search)
 	search->extdepthreached = 0;
 	search->qsdepthreached = 0;
 	search->score = 0;
-	search->scorebound = scorebound_exact;
 	search->nodes = 0;
 	search->hashhits = 0;
 	search->bestmove = (move_t){0,0,0,0};
@@ -35,7 +32,6 @@ void search_start(search_t *search, board_t *board)
 	search->extdepthreached = 0;
 	search->qsdepthreached = 0;
 	search->score = 0;
-	search->scorebound = scorebound_exact;
 	search->nodes = 0;
 	search->hashhits = 0;
 	search->bestmove = (move_t){0,0,0,0};
@@ -69,7 +65,7 @@ void *thinkmove(void *searchp)
 	search_t *search = (search_t*)searchp;
 	setjmp(search->checkpoint);
 	search->onpv = false;
-	for (search->depthreached=2;(search->depthreached < 64)&&(search->thinking == true);search->depthreached++)
+	for (search->depthreached=2;(search->depthreached < MAXPLY)&&(search->thinking == true);search->depthreached++)
 	{
 		window = 16;
 		do
@@ -78,17 +74,14 @@ void *thinkmove(void *searchp)
 			lower = search->score - window;
 			upper = search->score + window;
 			search->score = search_alphabeta(search,lower,upper,search->depthreached, 1);
-			search->scorebound = scorebound_exact;
 			if (search->score <= lower)
 			{
 				repeat = true;
-				search->scorebound = scorebound_lower;
 				window *= 2;
 			}
 			else if (search->score >= upper)
 			{
 				repeat = true;
-				search->scorebound = scorebound_upper;
 				window *= 2;
 			}
 		} while (repeat);
@@ -159,13 +152,13 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth, int nullm
 				search->hashhits++;
 				return alpha;
 			}
+			//if ((hashentry->alpha == 1)&&(hashentry->betascore > alpha)&&(search->depth > 2))
+				//return hashentry->betascore;
 		}
 	}
 
 	if (depth == 0)
 		return search_qsearch(search, alpha, beta);
-
-	search->nodes++;
 
 	if (search->nodes % 1024 == 0)
 	{
@@ -181,7 +174,7 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth, int nullm
 	if (search->depth >= MAXPLY - 1)
 		return eval_full(board);
 
-	if (!search->onpv && nullmove && !ischeck && search->depth > 0 && depth > 3)
+	if ((!search->onpv) && (nullmove) && (!ischeck) && (search->depth > 0) && (depth > 3))
 	{
 		// todo: try null move (if not in check and not onpv)
 		nullgubbins = board->gubbins;
@@ -191,12 +184,15 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth, int nullm
 		board->gubbins.hash ^= hash_turn[board->gubbins.turn];
 		board->gubbins.turn = 1 - board->gubbins.turn;
 		board->gubbins.hash ^= hash_turn[board->gubbins.turn];
-		spscore = -search_alphabeta_alphatest(search, -beta, (useddepth = (depth - 2)) - 1, 0);
+		if (depth > 5)
+			spscore = -search_alphabeta_alphatest(search, -beta, (useddepth = (depth - 3)) - 1, 0);
+		else
+			spscore = -search_alphabeta_alphatest(search, -beta, (useddepth = (depth - 2)) - 1, 0);
 		board->gubbins = nullgubbins;
 		// if reduced search is >= beta then return beta
 		if (spscore >= beta)
 			return beta;
-	}
+	} //*/
 
 	legalmoves = 0;
 	moves = board_generatecaptures(board, movelist);
@@ -204,11 +200,11 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth, int nullm
 	foundmove = search_rankmoves_withhash(search, movelist, movescore, moves);
 	if (foundmove == 2)
 		return 10000;
-	if ((!foundmove) && (!search->onpv) && (depth > 3))
+	if (depth > 3)
 	{
-		foundmove = search_rankmoves_internal(search, movelist, movescore, moves);
-		if (!ischeck)
+		if ((!ischeck) && (!foundmove) && (!search->onpv))
 			depth--;
+		foundmove = search_rankmoves_internal(search, movelist, movescore, moves, alpha);
 	}
 
 	for (imove = 0; imove < moves; ++imove)
@@ -222,19 +218,23 @@ int search_alphabeta(search_t *search, int alpha, int beta, int depth, int nullm
 
 		// calculate late move reductions
 		reduce = 0;
-		if ((foundmove) || (imove == 0) || (ischeck))
-			// don't reduce on mainlines, 1st moves or if in check
-			reduce = 0;
-		else if ((depth > 3) && (movescore[imove] < alpha))
+		if (depth > 1)
 		{
-			if (imove < 3)
-				// lets only reduce by 1 on 2nd and 3rd moves
+			if ((foundmove) || (search->onpv) || (imove == 0) || (ischeck) || (movelist[imove].capture) || (movelist[imove].promotion))
+				// don't reduce on mainlines, 1st moves, if in check or on captures/promotions
+				reduce = 0;
+			else if ((depth > 3) && (movescore[imove] >= alpha))
+				reduce = 0;
+			else if (imove < 3)
 				reduce = 1;
 			else
 				reduce = 2;
-		}
 
-		board_domove(board, &movelist[imove]);search->depth++;
+			if (depth - reduce < 2)
+				reduce = depth - 2;
+		} //*/
+		foundmove = 0;
+		board_domove(board, &movelist[imove]);search->depth++;search->nodes++;
 		// Test the move doesn't put our king under attack (illegal move!)
 		if (board_checktest(board, 1 - board->gubbins.turn))
 		{
@@ -326,8 +326,6 @@ int search_qsearch(search_t *search, int alpha, int beta)
 	if (search->depth > search->qsdepthreached)
 		search->qsdepthreached = search->depth;
 
-	search->nodes++;
-
 	search->pvl[search->depth] = search->depth;
 
 	if (search->depth >= MAXPLY - 1)
@@ -348,7 +346,7 @@ int search_qsearch(search_t *search, int alpha, int beta)
 	{
 		board_nextmove(movelist, movescore, moves, imove);
 
-		board_domove(board, &movelist[imove]);search->depth++;
+		board_domove(board, &movelist[imove]);search->depth++;search->nodes++;
 		spscore = -search_qsearch(search, -beta, -alpha);
 		board_undomove(board);--search->depth;
 		if (spscore > alpha)
@@ -373,20 +371,6 @@ int search_alphabeta_alphatest(search_t *search, int alpha, int depth, int nullm
 int search_alphabeta_betatest(search_t *search, int beta, int depth, int nullmove)
 {
 	return search_alphabeta(search, beta-1, beta, depth, nullmove);
-}
-
-int search_alphabeta_alphafirst(search_t *search, int alpha, int beta, int depth, int nullmove)
-{
-	if (search_alphabeta_alphatest(search, alpha, depth, nullmove) <= alpha)
-		return alpha;
-	return search_alphabeta(search, alpha, beta, depth, nullmove);
-}
-
-int search_alphabeta_betafirst(search_t *search, int alpha, int beta, int depth, int nullmove)
-{
-	if (search_alphabeta_betatest(search, beta, depth, nullmove) >= beta)
-		return beta;
-	return search_alphabeta(search, alpha, beta, depth, nullmove);
 }
 
 int search_rankmoves_withhash(search_t *search, move_t *movelist, int *movescore, int moves)
@@ -416,14 +400,15 @@ int search_rankmoves_withhash(search_t *search, move_t *movelist, int *movescore
 		}
 		if (hashentry->hash == search->board.gubbins.hash)
 		{
-			if (*(uint32_t*)&hashentry->bestmove == *(uint32_t*)&movelist[imove])
+			if (*(uint32_t*)&movelist[imove] == *(uint32_t*)&hashentry->bestmove)
 			{
 				movescore[imove] = 100000000;
 				foundmove = 1;
 				continue;
 			}
 		}
-		movescore[imove] = search_moveorder_pieces[movelist[imove].capture] + search_moveorder_pieces[movelist[imove].promotion];
+		movescore[imove] = board_moveorder_squares[movelist[imove].destination]; // - board_moveorder_squares[movelist[imove].source];
+		movescore[imove] += board_moveorder_pieces[movelist[imove].capture] + board_moveorder_pieces[movelist[imove].promotion];
 		movescore[imove] += search->history[movelist[imove].source][movelist[imove].destination];
 	}
 	return foundmove;
@@ -449,22 +434,27 @@ int search_rankmoves(search_t *search, move_t *movelist, int *movescore, int mov
 				continue;
 			}
 		}
-		movescore[imove] = search_moveorder_pieces[movelist[imove].capture] + search_moveorder_pieces[movelist[imove].promotion];
+		movescore[imove] = board_moveorder_squares[movelist[imove].destination]; // - board_moveorder_squares[movelist[imove].source];
+		movescore[imove] += board_moveorder_pieces[movelist[imove].capture] + board_moveorder_pieces[movelist[imove].promotion];
 		movescore[imove] += search->history[movelist[imove].source][movelist[imove].destination];
 	}
 	return foundmove;
 }
 
-int search_rankmoves_internal(search_t *search, move_t *movelist, int *movescore, int moves)
+int search_rankmoves_internal(search_t *search, move_t *movelist, int *movescore, int moves, int alpha)
 {
 	int imove, spscore;
 	board_t *board = &search->board;
-
 	for (imove = 0; imove < moves; ++imove)
 	{
-		board_domove(board, &movelist[imove]);search->depth++;
-		spscore = -search_qsearch(search, -10001, 10001);
+		board_nextmove(movelist, movescore, moves, imove);
+		if (movescore[imove] >= 100000000) // skip foundmove (pv move or hash move)
+			continue;
+		board_domove(board, &movelist[imove]);search->depth++;search->nodes++;
+		spscore = -search_qsearch(search, -(alpha+10), -(alpha));
 		board_undomove(board);--search->depth;
+		if (spscore <= alpha)
+			spscore = alpha - imove;
 		movescore[imove] = spscore;
 	}
 	return 0;

@@ -16,7 +16,7 @@
 
 #include "api.h"
 
-#define MAXPLY	64
+#define MAXPLY	128
 
 // define data types for various bit widths
 typedef unsigned int uint;

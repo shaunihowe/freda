@@ -21,10 +21,8 @@ clock_info_t search_clock = {0,6000,0,0,0,6000,6000};
 
 void uci_command()
 {
-	printf("id name %s %i.%i\n", VERSION_NAME, VERSION_MAJOR, VERSION_MINOR);
-	printf("id author %s\n", VERSION_AUTHOR);
-	//printf("option name UCI_AnalyseMode type check default true\n");
-	//printf("option name Hash type spin default 64 min 4 max 1024\n");
+	printf("id name %s %i.%i\n", version_name, version_major, version_minor);
+	printf("id author %s\n", version_author);
 	printf("uciok\n");
 	fflush(stdout);
 	return;
@@ -32,17 +30,13 @@ void uci_command()
 
 void ui_updateoutput()
 {
-	if (search_output.time_cs == 0)
-		search_output.time_cs = 1;
+	search_output.time_cs = search_output.time_cs > 0 ? search_output.time_cs : 1;
+	search_output.nodes = search_output.nodes > 0 ? search_output.nodes : 1;
 	printf("info depth %i seldepth %i ", search_output.depth, search_output.depth_qs);
 	printf("time %i ", search_output.time_cs * 10);
 	printf("hashfull %i ", (1000 - (search_output.hashhits * 1000) / (search_output.hashhits + search_output.nodes)));
 	printf("nodes %i nps %i ", search_output.nodes, (search_output.nodes / search_output.time_cs) * 100);
 	printf("score cp %i ", search_output.score);
-	if (search_output.scorebound == scorebound_lower)
-		   printf("lowerbound ");
-	else if (search_output.scorebound == scorebound_upper)
-		   printf("upperbound ");
 	printf("pv %s\n", search_output.pv);
 	fflush(stdout);
 	return;

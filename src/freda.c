@@ -2,179 +2,140 @@
 // https://github.com/shaunihowe/freda
 // BSD 2-Clause License - see file 'LICENSE' for more information
 
-#include "api.h"
+#include "defs.h"
 
-#include <stdio.h>
-#include <string.h>
+const char version_name[] = "Freda";
+const char version_author[] = "Shaun Howe";
+const int version_major = 1;
+const int version_minor = 1;
 
-typedef enum
+board_t mainboard;
+search_t mainsearch;
+search_output_t *mainsearch_output;
+
+void api_init()
 {
-	m_mainloop,
-	m_position,
-		m_position_fen,
-		m_position_moves,
-	m_go
-} uci_mode;
-
-search_output_t search_output;
-clock_info_t search_clock = {0,6000,0,0,0,6000,6000};
-
-void uci_command()
-{
-	printf("id name %s %i.%i\n", VERSION_NAME, VERSION_MAJOR, VERSION_MINOR);
-	printf("id author %s\n", VERSION_AUTHOR);
-	//printf("option name UCI_AnalyseMode type check default true\n");
-	//printf("option name Hash type spin default 64 min 4 max 1024\n");
-	printf("uciok\n");
-	fflush(stdout);
-	return;
-}
-
-void ui_updateoutput()
-{
-	if (search_output.time_cs == 0)
-		search_output.time_cs = 1;
-	printf("info depth %i seldepth %i ", search_output.depth, search_output.depth_qs);
-	printf("time %i ", search_output.time_cs * 10);
-	printf("hashfull %i ", (1000 - (search_output.hashhits * 1000) / (search_output.hashhits + search_output.nodes)));
-	printf("nodes %i nps %i ", search_output.nodes, (search_output.nodes / search_output.time_cs) * 100);
-	printf("score cp %i ", search_output.score);
-	if (search_output.scorebound == scorebound_lower)
-		   printf("lowerbound ");
-	else if (search_output.scorebound == scorebound_upper)
-		   printf("upperbound ");
-	printf("pv %s\n", search_output.pv);
-	fflush(stdout);
-	return;
-}
-
-void ui_bestmove(const char *move, const char *ponder)
-{
-	printf("bestmove %s ponder %s\n", move, ponder);
-	fflush(stdout);
-	return;
-}
-
-int main()
-{
-	char fenstring[256];
-	char input[2048], *command;
-	char delim[10] = " \t\n\r";
-	fenstring[0] = 0;
-	int m,t,i;
-	api_init();
-	int programclose = false;
-	do
-	{
-		fflush(stdout);
-		if (!fgets(input, 2048, stdin)){return 0;}
-		if (input[0] == '\n'){continue;}
-		command = strtok(input, delim);
-		uci_mode mode = m_mainloop;
-		do
-		{
-			if (mode == m_mainloop)
-			{
-				if (!strcmp(command, "uci"))
-					uci_command();
-				else if (!strcmp(command, "isready"))
-					printf("readyok\n");
-				else if (!strcmp(command, "ucinewgame"))
-					api_init();
-				else if (!strcmp(command, "show"))
-					api_showposition();
-				else if (!strcmp(command, "position"))
-					mode = m_position;
-				else if (!strcmp(command, "moves"))
-					mode = m_position_moves;
-				else if (!strcmp(command, "go"))
-					mode = m_go;
-				else if (!strcmp(command, "stop"))
-					api_stop();
-				else if (!strcmp(command, "quit"))
-					programclose = true;
-			}
-			else if (mode == m_position)
-			{
-				if (!strcmp(command, "fen"))
-				{
-					mode = m_position_fen;
-					fenstring[0] = 0;
-				}
-				else if (!strcmp(command, "startpos"))
-					api_setposition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-				else if (!strcmp(command, "moves"))
-					mode = m_position_moves;
-			}
-			else if (mode == m_position_fen)
-			{
-				do
-				{
-					if (!strcmp(command, "moves"))
-					{
-						mode = m_position_moves;
-						break;
-					}
-					else
-					{
-					    strcat(fenstring,command);
-					    strcat(fenstring," ");
-					}
-					command = strtok(NULL, delim);
-				} while (command != NULL);
-				api_setposition(fenstring);
-			}
-			else if (mode == m_position_moves)
-			{
-        		if (!(command[0] < 'a' || command[0] > 'h' || command[1] < '0' || command[1] > '8' || command[2] < 'a' || command[2] > 'h' || command[3] < '0' || command[3] > '8'))
-				api_move(command);
-			}
-			else if (mode == m_go)
-			{
-				do
-				{
-					if (!strcmp(command, "infinite"))
-						search_clock = (clock_info_t){0,99999900,0,0,0,99999900,99999900};
-					else if (!strcmp(command, "wtime"))
-					{
-						command = strtok(NULL, delim);
-						sscanf(command, "%i", &t);
-						search_clock.white_remaining_cs = t / 10;
-					}
-					else if (!strcmp(command, "winc"))
-					{
-						command = strtok(NULL, delim);
-						sscanf(command, "%i", &i);
-						search_clock.level_increment_cs = i / 10;
-					}
-					else if (!strcmp(command, "btime"))
-					{
-						command = strtok(NULL, delim);
-						sscanf(command, "%i", &t);
-						search_clock.black_remaining_cs = t / 10;
-					}
-					else if (!strcmp(command, "binc"))
-					{
-						command = strtok(NULL, delim);
-						sscanf(command, "%i", &i);
-						search_clock.level_increment_cs = i / 10;
-					}
-					else if (!strcmp(command, "movestogo"))
-					{
-						command = strtok(NULL, delim);
-						sscanf(command, "%i", &m);
-						search_clock.level_moves = m;
-						search_clock.white_remaining_moves = m;
-						search_clock.black_remaining_moves = m;
-					}
-					command = strtok(NULL, delim);
-				} while (command != NULL);
-				api_go(&search_output, &search_clock);
-			}
-			command = strtok(NULL, delim);
-		} while (command != NULL);
-	} while (!programclose);
 	api_stop();
-	return 0;
+	hash_init();
+	hash_malloc(64);
+	weights_init();
+	search_init(&mainsearch);
+	api_setposition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq 0 1");
+	return;
+}
+
+void api_setposition(const char *fenstring)
+{
+	api_stop();
+	board_setboard(&mainboard, fenstring);
+	return;
+}
+
+void api_getposition(char *fenstring)
+{
+	return;
+}
+
+void api_showposition()
+{
+	board_printboard(&mainboard);
+	return;
+}
+
+game_status_t api_getstatus()
+{
+	if (mainboard.gubbins.turn == WHITE)
+		return status_turn_white;
+	else
+		return status_turn_black;
+}
+
+void api_move(const char *move)
+{
+	move_t usermove;
+	int pro = 0;
+	if (move[4] == 'q'){pro=QUEEN;}
+	if (move[4] == 'r'){pro=ROOK;}
+	if (move[4] == 'n'){pro=KNIGHT;}
+	if (move[4] == 'b'){pro=BISHOP;}
+	usermove.source = ((move[1] - '1') * 8) + (move[0] - 'a');
+	usermove.destination = ((move[3] - '1') * 8) + (move[2] - 'a');
+	usermove.promotion = pro;
+	usermove.capture = 0;
+	api_stop();
+	board_domove(&mainboard,&usermove);
+	return;
+}
+
+void api_undomove()
+{
+	api_stop();
+	board_undomove(&mainboard);
+	return;
+}
+
+void api_go(search_output_t *search_output, clock_info_t *search_clock)
+{
+	int movesremaining;
+	api_stop();
+	mainsearch_output = search_output;
+	if (mainboard.gubbins.turn == WHITE)
+	{
+		movesremaining = search_clock->white_remaining_moves;
+		if (movesremaining == 0){movesremaining = 24;}
+		mainsearch.endtime_cs = (search_clock->white_remaining_cs / movesremaining) + search_clock->level_increment_cs;
+	}
+	else if (mainboard.gubbins.turn == BLACK)
+	{
+		movesremaining = search_clock->black_remaining_moves;
+		if (movesremaining == 0){movesremaining = 24;}
+		mainsearch.endtime_cs = (search_clock->black_remaining_cs / movesremaining) + search_clock->level_increment_cs;
+	}
+	mainsearch.endtime_cs = mainsearch.endtime_cs - 5;
+	if (mainsearch.endtime_cs < 5)
+		mainsearch.endtime_cs = 5;
+	search_start(&mainsearch, &mainboard);
+	return;
+}
+
+int api_busy()
+{
+	return mainsearch.thinking;
+}
+
+void api_stop()
+{
+	search_stop(&mainsearch);
+	return;
+}
+
+void api_update()
+{
+	int pvi, strst;
+	mainsearch_output->depth = mainsearch.depthreached;
+	mainsearch_output->depth_ext = mainsearch.extdepthreached;
+	mainsearch_output->depth_qs = mainsearch.qsdepthreached;
+	mainsearch_output->nodes = mainsearch.nodes;
+	mainsearch_output->hashhits = mainsearch.hashhits;
+	mainsearch_output->pv[0] = 0;
+	strst = 1;
+	for (pvi=0;pvi<mainsearch.pvl[0];++pvi)
+	{
+		strst+= board_sprintmove(&mainsearch_output->pv[strst - 1], &mainsearch.pv[0][pvi]);
+	}
+	mainsearch_output->score = mainsearch.score;
+	mainsearch_output->time_cs = (clock() - mainsearch.starttime) / (CLOCKS_PER_SEC / 100);
+	ui_updateoutput();
+	return;
+}
+
+void api_bestmove()
+{
+	char move[8];
+	char ponder[8];
+	board_sprintmove(move, &mainsearch.bestmove);
+	board_sprintmove(ponder, &mainsearch.pondermove);
+	ui_bestmove(move, ponder);
+	return;
 }
 

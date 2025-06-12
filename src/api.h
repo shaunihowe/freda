@@ -3,15 +3,15 @@
 // BSD 2-Clause License - see file 'LICENSE' for more information
 
 #ifndef __INC_API__ 
-#define __INC_API__ 
+#define __INC_API__
+
+extern const char version_name[];
+extern const char version_author[];
+extern const int version_major;
+extern const int version_minor;
 
 #include <stdint.h>
 #include <math.h>
-
-#define VERSION_NAME	"Freda"
-#define VERSION_AUTHOR	"Shaun Howe"
-#define VERSION_MAJOR	1
-#define VERSION_MINOR	0
 
 #define true 1
 #define false 0
@@ -38,18 +38,11 @@ typedef enum {
 	status_result_draw_50move
 } game_status_t;
 
-typedef enum {
-	scorebound_exact,
-	scorebound_lower,
-	scorebound_upper
-} scorebound_t;
-
 typedef struct {
 	int depth;
 	int depth_ext;
 	int depth_qs;
 	int score;
-	scorebound_t scorebound;
 	int time_cs;
 	int nodes;
 	int hashhits;

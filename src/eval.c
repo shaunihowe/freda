@@ -34,16 +34,6 @@ const int eval_flip[64] = {
 	 0, 1, 2, 3, 4, 5, 6, 7
 };
 
-float eval_winstoprob(int played, int wins)
-{
-	return (float)wins / (float)played;
-}
-
-float eval_winstoucb(int played, int wins)
-{
-	return (float)played / ((float)wins / ((float)played - (float)wins));
-}
-
 float eval_cptoprob(int32_t evalcp)
 {
 	float tevalf;

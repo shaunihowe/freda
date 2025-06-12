@@ -6,6 +6,18 @@
 
 int nodes;
 
+const int board_moveorder_pieces[] = {0, 0, 100, 300, 300, 500, 900, 10000};
+const int board_moveorder_squares[] = {
+	2, 1, 2, 3, 1, 2, 1, 2,
+	1, 2, 3, 4, 4, 4, 2, 1,
+	2, 3, 5, 6, 6, 5, 3, 2,
+	3, 4, 6, 8, 8, 6, 4, 3,
+	3, 4, 6, 8, 8, 6, 4, 3,
+	2, 3, 5, 6, 6, 5, 3, 2,
+	1, 2, 3, 4, 4, 4, 2, 1,
+	2, 1, 2, 3, 1, 2, 1, 2
+};
+
 const int cm[64] = {
 	13,15,15,15,12,15,15,14,
 	15,15,15,15,15,15,15,15,
@@ -80,8 +92,6 @@ void board_printboard(board_t *board)
 	if (board_checktest(board, board->gubbins.turn))
 		printf("# Check!\n");
 	printf("# Evaluations     CP  Prob\n");
-	sco = board_qsearch(board,-10002,10002);scof = eval_cptoprob(sco) * 100.0f;
-	printf("# Q Search:    %5i (%5.2f%%)\n",sco,scof);
 	sco = eval_full(board);scof = eval_cptoprob(sco) * 100.0f;
 	printf("# Static:      %5i (%5.2f%%)\n",sco,scof);
 	fflush(stdout);
@@ -1095,6 +1105,20 @@ void board_addmove(board_t *board, move_t *move, uint8_t source, uint8_t destina
 	return;
 }
 
+int board_rankmoves(move_t *movelist, int *movescore, int moves)
+{
+	int imove;
+
+	for (imove = 0; imove < moves; ++imove)
+	{
+		if (movelist[imove].capture == KING)
+			return 2;
+		movescore[imove] = board_moveorder_squares[movelist[imove].destination]; // - board_moveorder_squares[movelist[imove].source];
+		movescore[imove] += board_moveorder_pieces[movelist[imove].capture] + board_moveorder_pieces[movelist[imove].promotion];
+	}
+	return 0;
+}
+
 void board_nextmove(move_t *movelist, int *movescore, int moves, int next)
 {
 	int cur, bst;
@@ -1133,12 +1157,9 @@ int board_qsearch(board_t *board, int alpha, int beta)
 		alpha = spscore;
 
 	moves = board_generatecaptures(board, movelist);
-	for (imove = 0; imove < moves; ++imove)
-	{
-		if (movelist[imove].capture == KING)
-			return 10000 - board->gubbins.nummoves;
-		movescore[imove] = search_moveorder_pieces[movelist[imove].capture] + search_moveorder_pieces[movelist[imove].promotion];
-	}	
+
+	if (board_rankmoves(movelist, movescore, moves) == 2)
+		return 10000;
 
 	for (imove = 0; imove < moves; ++imove)
 	{

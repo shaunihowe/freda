@@ -7,4 +7,4 @@ A complete rewrite of my chess engine Puca using bitboards.
 * Supports analysis mode.
 * Negamax search with alpha-beta pruning, aspiration windows, null move, late move reductions, quiescence search and a middlegame/endgame tapered evaluation.
 * Multiple time control modes (Time per move, Moves in X Minutes, Increment etc.)
-* Estimated rating is around 2050 elo.
+* Estimated rating is around 2200 elo.

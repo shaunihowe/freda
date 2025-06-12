@@ -7,6 +7,8 @@
 
 #include "defs.h"
 
+extern const int board_moveorder_pieces[8];
+extern const int board_moveorder_squares[64];
 extern const int cm[64];
 
 typedef struct {
@@ -31,6 +33,7 @@ int board_repeattest(const board_t *board);
 int board_generatecaptures(board_t *board, move_t *movelist);
 int board_generatemoves(board_t *board, move_t *movelist);
 void board_addmove(board_t *board, move_t *move, uint8_t source, uint8_t destination, uint8_t promotion);
+int board_rankmoves(move_t *movelist, int *movescore, int moves);
 void board_nextmove(move_t *movelist, int *movescore, int moves, int next);
 
 int board_qsearch(board_t *board, int alpha, int beta);
