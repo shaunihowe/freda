@@ -84,14 +84,17 @@ void api_go(search_output_t *search_output, clock_info_t *search_clock)
 		movesremaining = search_clock->white_remaining_moves;
 		if (movesremaining == 0){movesremaining = 24;}
 		mainsearch.endtime_cs = (search_clock->white_remaining_cs / movesremaining) + search_clock->level_increment_cs;
+		if (mainsearch.endtime_cs > search_clock->white_remaining_cs - 5)
+			mainsearch.endtime_cs = search_clock->white_remaining_cs - 5;
 	}
 	else if (mainboard.gubbins.turn == BLACK)
 	{
 		movesremaining = search_clock->black_remaining_moves;
 		if (movesremaining == 0){movesremaining = 24;}
 		mainsearch.endtime_cs = (search_clock->black_remaining_cs / movesremaining) + search_clock->level_increment_cs;
+		if (mainsearch.endtime_cs > search_clock->black_remaining_cs - 5)
+			mainsearch.endtime_cs = search_clock->black_remaining_cs - 5;
 	}
-	mainsearch.endtime_cs = mainsearch.endtime_cs - 5;
 	if (mainsearch.endtime_cs < 5)
 		mainsearch.endtime_cs = 5;
 	search_start(&mainsearch, &mainboard);
